@@ -3,7 +3,7 @@ from fractions import Fraction as f
 
 
 def compute_probabilies(m):
-    res = [f(0, 1)]
+    res = [f(0, 1)] * len(m)
     terminal_states = []
     for i, row in enumerate(m):
         if sum(row) == 0:
@@ -11,45 +11,28 @@ def compute_probabilies(m):
             terminal_states.append(i)
             continue
 
-        res = [f(0, 1)] * len(row)
         total = sum(row)
         p_past = []
         for j, element in enumerate(row):
-            last = 0
-            # Magic P = P(next|paths)
-            # Lets go step by step
-            element = f(element, total)
+            res[j] = f(element, total)
             if i == 0:
-                res[j] = element
                 continue
 
             if j < i and m[j][i]:
-                # Probability of getting to this row = P(past)
-
-                # P(accumulated) = summation(P(next)*P(past))**n
-                # https://es.wikipedia.org/wiki/Anexo:Series_matem%C3%A1ticas
-                # P(accumulated) = 1 / (1 - P(next)*P(past))
-                last = f(
-                    m[j][i].numerator,
-                    m[j][i].denominator - len(p_past)
-                )
-                p_past.append(last / (1 - element * last))
-
-            print('p_past {}:'.format(p_past))
+                p_past.append(f(m[j][i], (1 - res[j] * m[j][i])))
+                continue
 
             last = 0
-            # And we are ready
-            if m[i-1][j]:
-                last = f(
-                    m[i-1][j].numerator,
-                    m[i-1][j].denominator - len(p_past)
-                )
+            ii = 0
+            while ii < i:
+                last += f(m[ii][j], (1 - (res[ii] * m[ii][ii + 1])))
+                ii += 1
 
-            p = (element + last) * sum(p_past)
-            res[j] = p
+            res[j] = (res[j] * sum(p_past)) + last
 
-        print('partial res {}: '.format(res))
-        m[i] = res
+        print('partial res {}: '.format(res[:]))
+        m[i] = res[:]
+
     print(terminal_states)
     return [e for i, e in enumerate(res) if i in terminal_states]
 
@@ -60,7 +43,7 @@ def answer(m):
     denominator = reduce(gcd, probabilities)
     print(denominator)
     return [
-        (p / denominator).numerator for p in probabilities
+        (f(p, denominator)).numerator for p in probabilities
     ] + [denominator.denominator]
 
 
@@ -92,10 +75,22 @@ print(3)
 m = [
     [0, 1, 0, 0, 1],
     [0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0],
-    [0, 0, 0, 0, 0],
-    [0, 1, 3, 0, 0]
+    [0, 1, 0, 0, 0],
+    [1, 0, 0, 0, 0],
+    [0, 0, 3, 1, 0]
 ]
 
 res = answer(m)
-assert res == ['donnu'], res
+assert res == [1, 1], res
+
+print(4444)
+m = [
+    [0, 1, 0, 1, 0],
+    [0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 0],
+    [1, 0, 0, 0, 0],
+    [0, 0, 1, 0, 0]
+]
+
+res = answer(m)
+assert res == [1, 100], res
