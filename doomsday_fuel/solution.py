@@ -4,50 +4,67 @@ from fractions import Fraction as f
 
 def compute_probabilies(m):
     res = [f(0, 1)]
+    terminal_states = []
     for i, row in enumerate(m):
         if sum(row) == 0:
             # It is a terminal state
+            terminal_states.append(i)
             continue
 
         res = [f(0, 1)] * len(row)
-        last = []
+        total = sum(row)
+        p_past = []
         for j, element in enumerate(row):
-            if j <= i:
-                continue
-            # Magic P = P(next|accumulated) + P(other_path|accumulated)
+            last = 0
+            # Magic P = P(next|paths)
             # Lets go step by step
+            element = f(element, total)
+            if i == 0:
+                res[j] = element
+                continue
 
-            # Probability of getting to this row = P(past)
-            p_past = m[i-1][i] if i > 0 else 1
+            if j < i and m[j][i]:
+                # Probability of getting to this row = P(past)
 
-            # Probability to get to next row without passing by this row
-            # P(other_path)
-            p_other_path = m[i-1][j] if i > 0 else 0
+                # P(accumulated) = summation(P(next)*P(past))**n
+                # https://es.wikipedia.org/wiki/Anexo:Series_matem%C3%A1ticas
+                # P(accumulated) = 1 / (1 - P(next)*P(past))
+                last = f(
+                    m[j][i].numerator,
+                    m[j][i].denominator - len(p_past)
+                )
+                p_past.append(last / (1 - element * last))
 
-            # P(next) = element value / total of row
-            p_next = f(element, sum(row))
+            print('p_past {}:'.format(p_past))
 
-            # P(accumulated) = summation(P(next)*P(past))**n
-            # https://es.wikipedia.org/wiki/Anexo:Series_matem%C3%A1ticas
-            # P(accumulated) = 1 / (1 - P(next)*P(past))
-            p_accumulated = 1 / (1 - p_past*row[0]/sum(row))
-
+            last = 0
             # And we are ready
-            p = (p_next * p_past + p_other_path) * p_accumulated
+            if m[i-1][j]:
+                last = f(
+                    m[i-1][j].numerator,
+                    m[i-1][j].denominator - len(p_past)
+                )
+
+            p = (element + last) * sum(p_past)
             res[j] = p
 
+        print('partial res {}: '.format(res))
         m[i] = res
-        res = res[i+1:]
-    return res
+    print(terminal_states)
+    return [e for i, e in enumerate(res) if i in terminal_states]
 
 
 def answer(m):
     probabilities = compute_probabilies(m)
+    print(probabilities)
     denominator = reduce(gcd, probabilities)
+    print(denominator)
     return [
         (p / denominator).numerator for p in probabilities
     ] + [denominator.denominator]
 
+
+print(1)
 m = [
    [0, 1, 0, 0, 0, 1],
    [4, 0, 0, 3, 2, 0],
@@ -56,9 +73,10 @@ m = [
    [0, 0, 0, 0, 0, 0],
    [0, 0, 0, 0, 0, 0],
  ]
-assert answer(m) == [0, 3, 2, 9, 14]
+res = answer(m)
+assert res == [0, 3, 2, 9, 14], res
 
-
+print(2)
 m = [
     [0, 2, 1, 0, 0],
     [0, 0, 0, 3, 4],
@@ -66,5 +84,18 @@ m = [
     [0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0]
 ]
+res = answer(m)
 
-assert answer(m) == [7, 6, 8, 21]
+assert res == [7, 6, 8, 21], res
+
+print(3)
+m = [
+    [0, 1, 0, 0, 1],
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0],
+    [0, 1, 3, 0, 0]
+]
+
+res = answer(m)
+assert res == ['donnu'], res
